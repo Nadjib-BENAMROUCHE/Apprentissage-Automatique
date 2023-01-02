@@ -1,0 +1,49 @@
+---
+title: "TP6 : PERCEPTRON"
+author: "Nadjib BENAMROUCHE"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+perceptron <- function(){
+  n = 3
+  
+# La base d'apprentissage   
+  S <- matrix(c(3,2,1,     # L'entree
+                1,1,1,
+                1,2,3),
+              nrow = n
+              )
+  d <- c(0,1,1)            # Vecteur de décision
+  pas <- 0.1               # Le pas d'apprentissage 
+  W <- c(1,1,1)            # L'init de la decision 
+  w0 <- 1                  # Le bais 
+  for( i in 1:n){
+    o = w0
+    for( v in seq_along(W)){
+      o = o + W[v] * S[v,i]     # le calcul de la sortie 
+    }
+    if(o >= 0){                 # le choix de la fonction f  
+      o = 1               
+    }
+    else{
+      o = 0                     
+    }
+    for (v in seq_along(W)){
+      W[v] = W[v] + pas * (d[i] - o) * S[v,i]       # Mise a jour des poids 
+    }
+    w0 = w0 + pas * (d[i] - o)*1               
+  } 
+  print(append(W,w0))         # Afficher les nouvelles valeurs 
+}
+
+```
+
+Le resultat : 
+```{r}
+
+perceptron()
+
+```

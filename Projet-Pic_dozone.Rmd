@@ -1,0 +1,996 @@
+---
+title: "Projet Modèle de Prévision du Pic d'Ozone"
+author: "Nadjib BENAMROUCHE"
+date: "24/10/2022"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+## Prise en charge des données
+
+```{r setup, include=FALSE}
+# Lecture des données
+path <- "http://www.math.univ-toulouse.fr/~besse/Wikistat/data/"
+ozone <- read.table(paste(path, "depSeuil.dat", sep = ""),
+                    sep = ",", header = TRUE)
+# Vérification du contenu
+summary(ozone)          #Résumé de données MAX, MIN, MEDIAN... pour chaque variable
+```
+```{r}
+colnames(ozone)         #Affiché les noms des variables
+```
+# Type de variables :
+
+  JOUR : variable binaire qualitative
+  O3obs : variable quantitave
+  MOCAGE : variable quantitave
+  TEMPE : variable quantitave
+  RMH2O : variable quantitave
+  NO2 : variable quantitave
+  NO : variable quantitave
+  VentMOD : variable quantitave
+  VentANG : variable quantitave
+
+Remarque : les varaible qualitatives sont les variables ou la moyenne n'as pas de sens.
+
+Par défaut les variables numeric sont considérés comme continues. Il est possible de les rendre discrètes en demandant une factorisation ( factor() ) des données. [variables binaires]
+
+```{r}
+# Changement du type des variables qualitatives en facteur
+ozone[, "JOUR"] <- as.factor(ozone[, "JOUR"])
+ozone[, "STATION"] <- as.factor(ozone[, "STATION"])
+#head(ozone,10)
+```   
+
+
+## Exploration élémentaire
+```{r}
+par(mfrow = c(1, 2))
+options(repr.plot.width = 8, repr.plot.height = 4)
+hist(ozone[, "O3obs"])
+hist(ozone[, "NO2"])
+```
+
+D'apres les histogrammes on remarque que les variables entre 90 et 150 sont les plus observé pour la O3obs (concentration d'ozone), et pour NO2 concentration en dioxyde d'azote entre 0 et 5. Elles ne sont pas vraiment symétriques.
+
+```{r cars}
+# Même chose pour les autres variables
+ hist(ozone[,"MOCAGE"]);hist(ozone[,"TEMPE"]);hist(ozone[,"RMH2O"])
+#
+hist(ozone[,"NO"]);hist(ozone[,"VentMOD"]);hist(ozone[,"VentANG"])
+```
+Remarques :
+
+-> D'après les histogrammes on remarque que la répartition de la concentration des variables O3obs, MOCAGE, RMH2O, NO2,  NO, VentMOD et VentANG sont asymétriques.
+
+-> La répartition de TEMPE est symétrique.
+
+
+Des transformations sont proposées pour rendre certaines distributions plus symétriques et ainsi plus "gaussiennes". C'est nécessaire pour certaines méthodes à venir de modélisation (linéaires), par pour toutes (arbres).
+
+```{r}
+# Les transformation pour affiné les données 
+ozone[, "SRMH2O"] <- sqrt(ozone[, "RMH2O"])
+ozone[, "LNO2"] <- log(ozone[, "NO2"])
+ozone[, "LNO"] <- log(ozone[, "NO"])
+```
+
+
+Verification des transformations :
+```{r}
+par(mfrow=c(1,2))
+options(repr.plot.width=8, repr.plot.height=3)
+hist(ozone[,"LNO2"])
+hist(ozone[,"SRMH2O"])
+hist(ozone[,"LNO"])
+```
+
+
+Vérifier l'opportunité de ces transformations puis retirer les variables initiales et construire la variable "dépassement de seuil" pour obtenir le fichier qui sera effectivement utilisé.
+
+```{r}
+ozone <- ozone[, c(1:4, 8:13)]
+ozone[, "DepSeuil"] <- as.factor(ozone[, "O3obs"] > 150)
+summary(ozone)
+```
+
+```{r}
+options(repr.plot.width = 8, repr.plot.height = 8)
+pairs(ozone[, c(2:4, 6:10)])
+```
+Remarque : la matrice est symétrique. 
+
+Une autre méthode pour afficher la matrice de correlation et etudie les dependences entre les variables (deux à deux)
+### Définition :
+Deux variables quantitatives sont corrélées si elles tendent à varier l'une en fonction de l'autre.
+On parle de corrélation positive si elles tendent à varier dans le même sens, de corrélation négative si elles
+tendent à varier en sens contraire.
+
+```{r}
+library("ggplot2")                     
+library("GGally")
+GGally::ggpairs(ozone)       # Matrice de correlation
+```
+
+
+####Q-1 - Que dire sur les relations des variables 2 à 2 ?
+
+Les deux variables les moins correler sont : VentMOD et le Tempe avec un coefficient 0,013. [ variables indépendantes  / corrélation nulle ]
+Les deux variables les plus correler sont : LNO et LNO2 avec un coefficient de coerrelation 0,904. [ variables liées / variables fortement                                                correler ] 
+                                            Tempe et O3obs avec un coefficient de coerrelation egale 0,609.
+                                            
+####Q-2 - Compléter en visualisant les corrélations avec la fonction 'corrplot' (package corrplot). Quelle est la limite de ce type de diagnostic numérique : quel type de corrélation est mesuré ?
+ 
+```{r}
+#matrice <- cor(ozone[, c(3:4, 6:10)])
+library("ggplot2")                     
+library("GGally")
+library(corrplot)
+GGally::ggpairs(ozone) 
+ 
+matrice <- cor(ozone[, c(2:4, 6:10)])
+corrplot(matrice, method = 'number')
+
+```
+
+
+```{r}
+library("corrplot")  
+library(tidyr)
+library(dplyr)
+
+colnames(ozone)
+str(ozone)              # type de variables
+#cor(ozone$NO2,ozone$NO)
+
+# selection des variables numeriques
+ozone_num = ozone %>% select('O3obs', 'MOCAGE', 'SRMH2O', 'LNO2', 'LNO', 'VentMOD', 'VentANG')
+
+# calcule de la matrice de corrélation
+m <- cor(ozone_num)
+
+# Corrélogramme : Visualisation de la matrice de corrélation
+corrplot(m, method="number")
+
+# Utilisation de differents spectres de couleurs
+col<- colorRampPalette(c("red", "white", "blue"))(20)
+corrplot(m, type="upper", order="hclust", col=col)
+
+```
+ * La limite de la corrélation : 
+On ne peut pas mesurer la corrélation au-delà de deux variables comme la corrélation ne s'inquiète pas de la présence ou de l'effet d'autres variables en dehors des deux variables étudiées. Et surtout, la corrélation ne nous apprend rien sur la cause et l'effet. 
+
+ ** Type de correlation : Il faut parler sur la corrélation lineare (possitive/negative)
+
+```{r}
+ozone
+```
+
+
+### Analyse en composantes principales :
+Permet d’analyser et de visualiser un jeu de données contenant des individus décrits par plusieurs variables quantitatives. cette méthode est utilisée pour extraire et visualiser les informations importantes contenues dans une table de données multivariées (données avec plusieurs variables).
+
+```{r}
+# ACP réduite
+# Décroissance des valeurs propres
+library(FactoMineR)
+library(tidyr)
+library(dplyr)
+glimpse(ozone[, c(11,2:4, 6:10)]) 
+acp <- PCA(ozone[, c(11,2:4, 6:10)], scale.unit = TRUE,
+           graph = FALSE, quali.sup = 1, quanti.sup = 2, ncp = 7)
+options(repr.plot.width = 8, repr.plot.height = 4)
+par(mfrow = c(1, 2))
+barplot(acp$eig[, 2], ylab = "Percentage", main = "Proportion of inertia")
+boxplot(acp$ind$coord, main = "Coordinates of individuals")
+```
+```{r}
+plot(acp, choix = "varcor")
+
+```
+
+```{r}
+plot(acp, choix = "ind", select = "contrib 5", unselect = 0)
+```
+
+
+Q-3 - Que sont ces graphiques?
+
+-> Pour le premier graph c'est le cercle des correlation des sept variables sélectionnées. 
+-> Pour le deuxième graph c'est le nuage de points des individus en deux dimensions.
+
+Q- Que dire du choix de la dimension, des valeurs atypiques?
+
+Le choix des dimensions est le facteur principale qui détermine la qualité d'une ACP.
+
+```{r}
+library("factoextra")
+eig.val <- get_eigenvalue(acp)
+eig.val
+#acp$eig
+```
+
+Le choix n’est pas le meilleur dans ce cas car la somme des dimensions est loin de la valeur 100%, dans notre en deux dimensions on peut représenter 53% de nos données. Dans notre analyse, les trois premières composantes principales expliquent 75% de la variation. C'est un pourcentage acceptable. Une autre méthode pour déterminer le nombre de composantes principales est de regarder le graphique des valeurs propres (appelé scree plot). 
+Les points qui sont loin sont considéré comme des variable atypique contrairement aux valeurs qui sont proches l’une par rapport à l’autre
+
+
+
+Q- Que dire de la structure de corrélation des variables ? Est-elle intuitive ?
+
+Plus les deux variables sont proches, plus sont corrélées entre elles et plus elles sont loin de l'origine plus elles sont liées.
+La distance entre les variables et l’origine mesure la qualité de représentation des variables. Les variables qui sont loin de l’origine sont bien représentées par l’ACP (flèche plus grande) par exemple la flèche de LNO et LNO2 est la plus grande comme le montre dans le graphe de cercle de correlation - plus deux variables sont corrélées, plus leurs flèches pointent dans la même direction.
+
+Même graphe en coloriant les dépassement de seuil la concentration d'ozone (150 $\mu g$).
+
+```{r}
+plot(acp, choix = "ind", habillage = 1,
+     select = "contrib 5", unselect = 0)
+```
+
+
+
+Q- Une discrimination linéaire (hyperplan) semble-t-elle possible ?
+
+Réponse : je penses qu’une discrimination linéaire semble possible à faire, en changeant de repére et les dimentions ,mais elle n’est pas très utile.
+
+```{r}
+km.ozone <- kmeans(ozone[, c(3:4, 6:10)], centers = 2)
+# Représentation dans les coordonnées de l'acp
+acp2 <- PCA(cbind(coul = as.factor(km.ozone$cluster),
+          ozone[, c(11, 3:4, 6:10)]), scale.unit = TRUE,
+          graph = FALSE, quali.sup = 1:2, ncp = 7)
+plot(acp2, choix = "ind", habillage = "coul",
+     select = "contrib 3", unselect = 0)
+```
+* Donne t-elle la même information ?
+L'algorithme k-means donne plus d'informations sur la classification des données (plus de précision). 
+
+
+
+## Protocole de comparaison
+
+Q- Commenta appelle-t-on cette procédure spécifique de validation croisée ?
+
+Train Test Split c'est une approche de l'apprentissage supervisé.
+
+
+
+### Extraction des échantillons
+
+Les commandes ci-dessous réalisent l'extraction du sous-ensemble des données d'apprentissage et de test.
+
+```{r}
+set.seed(111) # initialisation du générateur
+# Extraction des échantillons
+test.ratio <- .2   # part de l'échantillon test
+npop <- nrow(ozone) # nombre de lignes dans les données
+nvar <- ncol(ozone) # nombre de colonnes
+# taille de l'échantillon test
+ntest <- ceiling(npop * test.ratio) 
+# indices de l'échantillon test
+testi <- sample(1:npop, ntest)
+# indices de l'échantillon d'apprentissage
+appri <- setdiff(1:npop, testi) 
+```
+
+Construction des échantillons pour la régression: prévision de la concentration en ozone.
+
+```{r}
+# construction de l'échantillon d'apprentissage
+datappr <- ozone[appri, -11] 
+# construction de l'échantillon test
+datestr <- ozone[testi, -11] 
+# vérification
+str(datappr)
+str(datestr)
+#summary(datappr) 
+     
+```
+
+Construction des échantillons pour la discrimination: prévision de dépassement.
+
+```{r}
+# construction de l'échantillon d'apprentissage
+datappq <- ozone[appri,-2]
+# construction de l'échantillon test 
+datestq <- ozone[testi,-2] 
+# vérification
+str(datappq)
+str(datestq)
+#summary(datappq)
+```
+
+Enfin, avant de passer aux différents algorithmes, définissons une fonction traçant le graphe des résidus avec des couleurs et des échelles fixes sur les axes (à utiliser pour tracer l'erreur).
+
+```{r}
+
+options(repr.plot.width = 8, repr.plot.height = 4)
+# Définition d'une fonction pour un graphe coloré et des échelles fixes sur les
+# axes
+plot.res <- function(x, y, titre = "titre") {
+    plot(x, y, col = "blue", xlim = c(0, 250), ylim = c(-100, 100), ylab = "Résidus", 
+        xlab = "Valeurs prédites", main = titre, pch = 20)
+    # points(x2, y, col='red')
+    abline(h = 0, col = "green")
+}
+     
+```
+
+
+832 : individus pour l'apprentissage.
+209 : individus pour le test. 
+
+## Prévision par modèle gaussien
+### Modèle linéaire
+
+-> Sans sélection de variables
+
+Le modèle de régression linéaire simple intégre des variables qualitatives; c'est dans ce cas une analyse de covariance estimée par la fonction aov mieux adaptée à ce modèle.
+
+```{r}
+
+# estimation du modèle sans interaction
+reg.lm <- aov(O3obs ~ . , data = datappr)
+
+# Extraction des résidus et des valeurs ajustées de ce modèle
+res.lm <- reg.lm$residuals
+fit.lm <- reg.lm$fitted.values
+
+# Graphe des résidus. 
+plot.res(fit.lm,res.lm,"Régression linéaire sans sélection de variables")
+     
+```
+
+Q - Que dire de la distribution de ces résidus?
+
+**Réponse**  Pas de linéarité
+
+Q - La forme du nuage renseigne sur les hypothèses de linéarité du modèle et d'homoscédasticité. Que dire de la validité de ce modèle ?
+
+**Réponse**La figure montre que le résidu n’apporte pas de changement avec X , par contre on remarque que la propagation n’est pas stable . 
+
+Le modèle est invalide par ce que le graphe des résidus versus les valeurs prédites ne présente pas de structure (indépendance, homoscédasticité, normalité). 
+
+Apprécier néanmoins sa significativité par la commande suivante.
+
+```{r}
+summary(reg.lm)
+```
+Q - Ce premier modèle est comparé avec celui de la seule prévision déterministe MOCAGE. Qu'en conclure ?
+
+```{r}
+# Graphe des résidus du modèle déterministe MOCAGE
+par(mfrow = c(1, 2))
+plot.res(datappr[, "MOCAGE"],
+         datappr[, "MOCAGE"] - datappr[, "O3obs"], "linéaire, MOCAGE seul")
+plot.res(fit.lm, res.lm, "Linéaire, sans sélection")
+par(mfrow = c(1, 1))
+
+```
+
+Remarque : dans le modèle déterministe de la variable MOCAGE l'erreur est plus grande. d'où la variable MOCAGE influence sur le taux d'erreur. 
+-> Sélection de variable par régularisation L1 (LASSO) [ pour Minimiser la complexité du modèle ]
+
+```{r}
+library(glmnet)
+library(Matrix)
+# avec des variables quantitatives seulement
+reg.lasso.quanti <- glmnet(y = datappr[, 2],
+                           x = as.matrix(datappr[, -c(1, 2, 5)]))
+# avec toutes les variables, créer d'abord la matrice d'expériences 
+# avec 'model.matrix' (penser à retirer l'intercept du modèle)
+x.mat <- model.matrix(O3obs ~ . - 1, data = datappr)
+reg.lasso <- glmnet(y = datappr$O3obs, x = x.mat)
+options(repr.plot.width = 12, repr.plot.height = 10)
+plot(reg.lasso, xvar = "lambda", label = TRUE)
+legend("topright", 
+       legend = paste(1:ncol(x.mat), " - ", colnames(x.mat)))
+```
+
+
+Q - Que fait la commande model.matrix ? Comment sont gérées les variables catégorielles ?
+
+ Model.matrix permet de visualiser le modèle numerique crée par une formule et peut etre utile pour verifier un modèle.
+ La commande model.matrix permet aussi de creer une matrice de modèle qui contient uniquement les variables quantitatives, 
+et de modifier les variable categorielles en factor.
+ Les variables catégorielles sont des objets de type factor, Si on souhaite intégrer une variable catégorielle à un modèle de régression linéaire, il y a deux méthodes. La première, est de définir le type de la variable dans le tableau qui contient les données (tibble, data.frame, …). La seconde est d’utiliser la variable factor() dans la formule, lors de l’appel de la régression. La première méthode possède l’avantage de la lisibilité, surtout lorsque l’on souhaite définir la valeur de référence.
+
+Q - Que représentent les courbes ci-dessus, appelées "chemins de régularisation"?
+
+ Les courbes ci-dessus representent : l'optimisations des residus pour chaque variabale dans le but d'avoir le moins de residus.
+
+```{r}
+#help(model.matrix)
+head(x.mat)
+```
+
+```{r}
+
+# choix du paramètre de régularisation par validation croisée
+reg.lasso.cv <- cv.glmnet(y = datappr[, 2], x = x.mat)
+plot(reg.lasso.cv)
+     
+```
+
+```{r}
+library(glmnet)
+help(cv.glmnet)
+     
+```
+
+
+Q - Que représente la courbe rouge ? Et la bande qui est autour ?
+
+ La courbe rouge représente la minimisation de l'erreur quadratique moyenne des valeurs de coefficient de régularisation (Lamda), les valeurs autour représentant l'écart-type.
+ La valeur optimale du paramètre de régularisation est celle qui correspond au minimum globale de l’erreur quadratique moyenne (EQM).
+
+Q - Comment sont obtenues les valeurs de log(lambda) correspondant aux lignes verticales en pointillé ?
+
+  On applique la fonction cv.glmnet du package glmnet qui nous permet de lancer des validations croiser sur un set de modèles LASSO pour une range de lambda. On se retrouve donc avec plusieurs modèles LASSO associé chacun à une valeur de lambda différente.
+ En utilisant la fonction plot on obtient directement le graphique représentant les MSE des modèles, aprés on peut extraire facilement le modèle associé au plus petit lambda.
+ 
+```{r}
+
+# valeur estimée
+paste("CV estimate of lambda :", round(reg.lasso.cv$lambda.1se, 3))
+# modèle correspondant
+coef(reg.lasso.cv, s = "lambda.1se")
+     
+```
+Q Même question en choisissant l'autre valeur de lambda retenue par glmnet, i.e. "reg.lasso.cv$lambda.min"
+
+```{r}
+# valeur estimée
+paste("CV estimate of lambda :", round(reg.lasso.cv$lambda.min, 3))
+# modèle correspondant
+coef(reg.lasso.cv, s = "lambda.1se")
+```
+
+
+
+```{r}
+# NEW : 
+plot(reg.lasso, xvar = "lambda", label = TRUE,xlim=c(0,2),ylim=c(-2,5))
+abline(v=log(reg.lasso.cv$lambda.1se),col="red")
+```
+
+```{r}
+# NEW : 
+# valeur estimée
+paste("CV estimate of lambda :", round(reg.lasso.cv$lambda.min, 3))
+# modèle correspondant
+coef(reg.lasso.cv, s = "lambda.min")
+
+plot(reg.lasso, xvar = "lambda", label = TRUE,xlim=c(-2,0),ylim=c(-5,40))
+abline(v=log(reg.lasso.cv$lambda.min),col="red")
+```
+
+```{r}
+# Extraction des valeurs ajustées et des résidus
+fit.lasso <- predict(reg.lasso.cv, s = "lambda.min", newx = x.mat)
+res.lasso <- datappr$O3obs - fit.lasso
+# Graphe des résidus
+options(repr.plot.width = 8, repr.plot.height = 4)
+par(mfrow = c(1, 2))
+plot.res(fit.lm, res.lm, "linéaire")
+plot.res(fit.lasso, res.lasso, "linéaire, pénalité L1")
+```
+
+```{r}
+# Extraction des valeurs ajustées et des résidus
+
+fit.lasso <- predict(reg.lasso.cv, s = "lambda.min", newx = x.mat)
+res.lasso <- datappr$O3obs - fit.lasso
+
+fit.lasso.1se <- predict(reg.lasso.cv, s = "lambda.1se", newx = x.mat) # NEW
+res.lasso.1se <- datappr$O3obs - fit.lasso.1se # NEW
+
+# Graphe des résidus
+options(repr.plot.width = 12, repr.plot.height = 4)
+par(mfrow = c(1, 3))
+plot.res(fit.lm, res.lm, "Linéaire, sans sélection")
+plot.res(fit.lasso, res.lasso, "Linéaire, pénalité L1, lambda min")
+plot.res(fit.lasso.1se, res.lasso.1se, "Linéaire, pénalité L1, lambda 1se") # NEW
+```
+
+Q - Calculer le critère MSE (moyenne des carrés des résidus) pour les deux modèles. Pourquoi celui obtenu par LASSO est-il moins bon ? Quel critère LASSO minimise t-il ?
+
+ Il y'a pas une grande différence, le critère qui minimise lasso est la valeur de lambda
+
+Q - Estimer l'erreur de généralisation du modèle de régression linéaire simple sans sélection de variables par validation croisée. Comparer avec celle du LASSO. Qu'observez-vous?
+
+```{r}
+# NEW : 
+paste("Modèle linéaire sans séletion:",mean(res.lm^2))
+paste("LASSO avec lambda.min:",mean(res.lasso^2))
+paste("LASSO avec lambda.1se:",mean(res.lasso.1se^2))
+```
+
+```{r}
+# NEW
+V=10 ; nV=floor(nrow(datappr)/V)
+S=sample(1:nrow(datappr),replace=FALSE)
+error.CV = c()
+for(v in 1:V)
+{ # Rq : les deux dernières obs sont tjs dans l'échantillon d'apprentissage...
+    datappr.learn=datappr[-c(S[(nV*(v-1)):(nV*v)]),] 
+    datappr.valid=datappr[c(S[(nV*(v-1)):(nV*v)]),]
+    error.CV=c(error.CV,mean((datappr.valid$O3obs-predict(aov(O3obs ~ ., data=datappr.learn),newdata=datappr.valid))^2))
+}
+mean(error.CV)
+
+print(reg.lasso.cv)
+     
+```
+
+
+## Modèle quadratique 
+
+#### Sélection de variables par critère AIC
+
+Q - Quel autre critère, équivalent à AIC dans le cas gaussien et de variance résiduelle connue, est utilisée en régression linéaire ?
+
+	Le critère d'information bayésien (en anglais bayesian information criterion ; en abrégé BIC) est une dérive de modèle AIC.
+      {\mathit  {BIC}}=-2\ln(L)+\ln(n)k
+      
+```{r}
+# Estimation du modèle de toute interaction d'ordre 2
+reg.glm <- glm(O3obs ~ .^2, data = datappr)
+# Recherche du meilleur modèle au sens 
+# du critère d'Akaïke par méthode descendante
+reg.glm.step <- step(reg.glm, direction = "backward")
+     
+```
+```{r}
+# Coefficients du modèle
+anova(reg.glm.step, test = "F")
+```
+
+	
+#### Sélection de variable par régularisation L1 (LASSO)
+
+```{r}
+# Comparer avec un modèle quadratique avec pénalité L1
+x.mat2 <- model.matrix(O3obs ~ .^2 - 1, data = datappr)
+reg.lasso2.cv <- cv.glmnet(y = datappr[, "O3obs"], x = x.mat2)
+coef(reg.lasso2.cv, s = "lambda.1se")
+```
+
+```{r}
+# Extraction des valeurs ajustées et des résidus
+fit.glm <- reg.glm.step$fitted.values
+res.glm <- reg.glm.step$residuals
+fit.lasso2 <- predict(reg.lasso2.cv, s = "lambda.min", newx = x.mat2)
+res.lasso2 <- datappr$O3obs - fit.lasso2
+
+# Graphe des résidus
+options(repr.plot.width = 8, repr.plot.height = 8)
+par(mfrow = c(2, 2))
+plot.res(fit.lm, res.lm, "linéaire")
+plot.res(fit.lasso, res.lasso, "linéaire, pénalité L1")
+plot.res(fit.glm, res.glm, "quadratique, backward AIC")
+plot.res(fit.lasso2, res.lasso2, "quadratique, pénalité L1")
+```
+
+	
+### Prévision de l'échantillon test
+
+#### Erreur de régression
+
+```{r}
+
+# Calcul des prévisions pour le nomdèle quadratique backward AIC
+pred.glm <- predict(reg.glm.step, newdata = datestr)
+# Erreur quadratique moyenne de prévision (MSE)
+sum((pred.glm - datestr[, "O3obs"])^2) / nrow(datestr)
+     
+```
+
+```{r}
+
+# Erreur quadratique par MOCAGE
+sum((datestr[,"MOCAGE"] - datestr[,"O3obs"])^2) / nrow(datestr)
+```
+#### Erreur de classification (matrice de confusion)
+
+```{r}
+# Matrice de confusion pour la prévision du dépassement de seuil
+table(pred.glm > 150, datestr[, "O3obs"] > 150)
+```
+
+
+```{r}
+# Matrice de confusion pour la prévision du 
+# dépassement de seuil par MOCAGE
+table(datestr[, "MOCAGE"] > 150, datestr[, "O3obs"] > 150)
+```
+-> Noter ces erreurs pour les comparer avec celles obtenues par les autres méthodes. Noter l'asymétrie des erreurs.
+
+## Prévision par modèle binomial
+
+Plutôt que de prévoir la concentration puis le dépassement, on peut se poser la question de savoir s'il ne serait pas pertinent de prévoir directement la présence ou l'absence d'un dépassement. La variable à modéliser étant binaire, c'est la régression logistique qui va être employée. Comme pour la régression, différentes stratégies de choix de modèle peuvent être utilisées et comparées avant d'estimer l'erreur de prévision sur l'échantillon test.
+
+#### Régression logistique sans interaction
+
+```{r}
+# estimation du modèle complet
+log.lm <- glm(DepSeuil ~. , data = datappq, family = binomial)
+# significativité des paramètres
+anova(log.lm, test = "Chisq")
+```
+
+
+```{r}
+# Recherche d'un modèle optimal au sens d'Akaïke
+log.lm.step <- step(log.lm, direction = "backward")
+```
+```{r}
+# Modèle obtenu
+anova(log.lm.step, test = "Chisq")
+```
+```{r}
+# matrice de confusion de l'échantillon d'apprentissage et erreur apparente
+table(log.lm.step$fitted.values > 0.5, datappq[, "DepSeuil"])
+```
+
+#### Régression logistique avec interactions
+
+Avec autant de variables et d'interactions donc de paramètres, l'estimation du modèle complet de régression logistique rencontre des soucis et affiche des warnings car certaines probabilité trop bien ajustés (0 ou 1) provoquent des divisions par 0. Ici une procédure forward ou mieux stepwise de sélection des variables et interactions conduit à des résultats raisonnables. Une méthode avec pénalisation L1 peut aussi être utilisée.
+
+```{r}
+# régression avec le modèle minimum
+log.qm <- glm(DepSeuil ~ 1, data = datappq,family = binomial)
+# algorithme stepwise en précisant le plus grand 
+# modèle possible
+log.qm.step1 <- step(log.qm, direction = "both",
+    scope = list(lower = ~1, upper = ~(JOUR + MOCAGE + TEMPE + 
+            STATION + VentMOD + VentANG + LNO2 + LNO + SRMH2O)^2), 
+    family=binomial)
+```
+```{r}
+anova(log.qm.step1, test = "Chisq")
+```
+
+#### Régression logistique avec interactions
+
+```{r}
+# régression avec le modèle minimum
+log.qm <- glm(DepSeuil ~ 1, data = datappq,family = binomial)
+# algorithme stepwise en précisant le plus grand 
+# modèle possible
+log.qm.step1 <- step(log.qm, direction = "both",
+    scope = list(lower = ~1, upper = ~(JOUR + MOCAGE + TEMPE + 
+            STATION + VentMOD + VentANG + LNO2 + LNO + SRMH2O)^2), 
+    family=binomial)
+```
+```{r}
+anova(log.qm.step1, test = "Chisq")
+```
+
+### Prévision de l'échantillon test 
+
+#### Matrice de confusion
+
+```{r}
+# Prévision du modèle quadratique
+pred.log <- predict(log.qm.step1, newdata = datestq, type = "response")
+# Matrice de confusion pour la prévision du 
+# dépassement de seuil
+table(pred.log > 0.5, datestq[, "DepSeuil"])
+```
+Comparer avec l'approche précédente. Mémoriser les résultats obtenus pour comparer avec les autres méthodes.
+
+### Courbe ROC
+
+Il est également possible de construire une courbe ROC en association de la prévision obtenue à partir d'un modèle gaussien. En effet, la variation du seuil théorique de dépassement (150) va faire varier les proportions respectives des taux de vrais et faux positifs. Cela revient encore à faire varier le seuil d'une "proba" pour les valeurs de prévisions divisées par 300.
+
+
+
+```{r}
+library(ROCR)   # Librairie à charger
+roclogit <- predict(log.qm.step1, newdata = datestq, type="response")
+predlogit <- prediction(roclogit, datestq[, "DepSeuil"])
+perflogit <- performance(predlogit, "tpr", "fpr")
+# Tracé de la courbe
+plot(perflogit, col = "blue")
+
+# Calculs pour la régression
+rocglm <- pred.glm / 300
+predglm <- prediction(rocglm, datestq[, "DepSeuil"])
+perfglm <- performance(predglm, "tpr", "fpr")
+# tracé de la courbe et ajout au graphe précédent.
+plot(perfglm, col = "blue",lty=2, add = TRUE)
+```
+
+-> Courbe ROC : La courbe ROC (receiver operating characteristic) est un graphique qui illustre la capacité de diagnostic d'un
+système de classification binaire lorsque son seuil de discrimination varie, cette courbe permet d’avoir la
+relation entre la sensibilité qui est la capacité de donné un résultat positif l’lorsque l’hypothèse est vérifié c’est
+le taux de vrai positif et la spécificité qui mesure sa capacité à donner un résultat négatif lorsque l’hypothèse
+n’est pas vérifiée (vrai négatif)).
+
+ La courbe ROC montre le compromis entre la sensibilité (ou TPR) et la spécificité (1 - FPR).
+
+Q - Les performances des deux approches gaussiennes et binomiales sont-elles très différentes ?
+
+ Sachant que l’approche gausiennes s’est basée sur le modél linéaire et la deuxiéme approche s’est basée sur le modéle de regression logistique, on peut conclure qu’en terme de resultat de prédictions incorrectes les deux mdéles donnent approximativement les méme resultats, et donc en terme de performance les deux modéles ne sont pas vraiment differents.
+ 
+
+## Arbre de décision binaire
+
+Q - Quel critère est optimisé lors de la création d'un noeud de l'arbre ?
+
+-> Le critere de devision qui repose sur une fonction d'homogeneité
+
+
+```{r}
+library(rpart) # chargement de la librairie
+tree.reg=rpart(O3obs~.,data=datappr,control=rpart.control(cp=0.001))
+# La commande ci-dessous fournit un descriptif de l'arbre obtenu
+# summary(tree.reg)  
+# mais un graphe est  préférable
+     
+```
+
+```{r}
+library(rpart)
+help(rpart)
+```
+
+```{r}
+help(rpart.control)
+```
+
+```{r}
+plot(tree.reg)
+text(tree.reg)
+```
+L'arbre est illisible et présente trop de feuilles pour une bonne prévision (sur-apprentissage), il est nécessaire d'en réduire le nombre par élagage. Les commandes suivantes calculent les prévisions obtenues par validation croisée 10-fold pour chaque arbre élagué suivant les valeurs successives du coefficient de complexité. La séquence de ces valeurs est implicitement celle fournit par rpart.
+
+```{r}
+xmat=xpred.rpart(tree.reg)
+xerr=(xmat-datappr[,"O3obs"])^2
+CVerr=apply(xerr,2,sum)
+CVerr  #    CP           erreur
+```
+
+
+```{r}
+help(xpred.rpart)
+```
+
+Chercher la valeur de cp correspondant à la plus petite erreur puis l'utiliser la construction del'arbre.
+
+```{r}
+as.numeric(attributes(which.min(CVerr))$names)
+```
+```{r}
+tree.reg=rpart(O3obs~.,data=datappr,control=rpart.control(cp=as.numeric(attributes(which.min(CVerr))$names)))
+```
+
+La librairie partykit propose une construction graphique de l'arbre:
+
+```{r}
+library(partykit)
+plot(as.party(tree.reg), type="simple")
+```
+
+
+La fenêtre est trop petite pour représenter les distributions (histogramme) de la variable cible (concentration en ozone) dans chaque feuille.
+
+Q Quelle est la variable qui contribue le plus à l'interprétation?
+
+-> La variable de temperature.
+
+Graphe des résidus
+
+```{r}
+fit.tree=predict(tree.reg)
+res.tree=fit.tree-datappr[,"O3obs"]
+plot.res(fit.tree,res.tree)
+```
+Q - A quoi est due la structure particulière de ce graphe ?
+
+-> Par rapport aux nombres de feuilles
+
+#### Estimation et élagage d'un arbre de discrimination
+
+Dans le cas d'une discrimination, le critère par défaut est l'indice de concentration de Gini ; il est possible de préciser un autre critère (split="information") ainsi que des poids sur les observations, une matrice de coûts de mauvais classement ainsi que des probabilités a priori (?rpart pour plus de détails).
+
+Q - Quel autre critère d'hétérogénéité est utilisé ?
+
+-> Le CP.
+
+```{r}
+
+tree.dis=rpart(DepSeuil~.,data=datappq,parms=list(split="information"),cp=0.001)
+plot(tree.dis) 
+text(tree.dis)  
+     
+```
+
+
+La même procédure d'élagage par validation croisée est mise en place mais avec un expression différente de l'erreur de prévision: taux de mal classés plutôt qu'erreur quadratique.
+
+```{r}
+xmat = xpred.rpart(tree.dis)
+# Comparaison des valeurs prédite et observée
+xerr=datappq$DepSeuil!= (xmat>1.5) 
+# Calcul  des estimations des taux d'erreur
+CVerr=apply(xerr, 2, sum)/nrow(xerr)
+CVerr
+     
+```
+
+```{r}
+as.numeric(attributes(which.min(CVerr))$names)
+
+```
+```{r}
+tree.dis=rpart(DepSeuil~.,data=datappq,parms=list(split="information"),
+               cp=as.numeric(attributes(which.min(CVerr))$names))
+plot(as.party(tree.dis), type="simple")
+     
+```
+#### Prévision de l'échantillon test
+
+##### Erreur de régression
+
+```{r}
+# Calcul des prévisions
+pred.treer=predict(tree.reg,newdata=datestr)
+pred.treeq=predict(tree.dis,newdata=datestq,type="class") 
+# Erreur quadratique moyenne de prévision en régression
+sum((pred.treer-datestr[,"O3obs"])^2)/nrow(datestr)
+```
+##### Erreur de classification (matrice de confusion)
+
+```{r}
+# Matrice de confusion pour la prévision du 
+# dépassement de seuil (régression)
+table(pred.treer>150,datestr[,"O3obs"]>150)
+```
+```{r}
+# Même chose pour l'arbre de discrimination
+table(pred.treeq,datestq[,"DepSeuil"])
+```
+Q - Quelle stratégie semble meilleure à ce niveau ? 
+
+-> La methode de discrimination est legerment meilleurs a ce niveau. 
+
+
+#### Courbes ROC
+
+```{r}
+ROCregtree=pred.treer/300
+predregtree=prediction(ROCregtree,datestq$DepSeuil)
+perfregtree=performance(predregtree,"tpr","fpr")
+ROCdistree=predict(tree.dis,newdata=datestq,type="prob")[,2]
+preddistree=prediction(ROCdistree,datestq$DepSeuil)
+perfdistree=performance(preddistree,"tpr","fpr")
+# tracer les courbes ROC en les superposant 
+# pour mieux comparer
+plot(perflogit,col="blue")
+plot(perfregtree,col="orange",lty=2,add=TRUE) 
+plot(perfdistree,col="green",add=TRUE)  
+```
+
+Q - Une meilleure méthode se dégage-t-elle ?
+
+-> La méthode qui represente la courbe bleu. 
+
+## Réseau de neurones
+
+### Introduction
+
+Q - Quelle fonction de transfert pour le dernier neurone en régression ?
+
+-> C'est la fonction Linéaire (puisque c'est une régression linéaire donc notre sortie est linéaire).
+
+Q - Quelle focntion de transfert pour le dernier neuronne en discrimination binaire ?
+
+-> En classification binaire, le neurone de sortie est muni également de la fonction sigmoïde qui nous donne en sortie soit 0 ou 1.
+
+Q - Quid de la discrimination avec plusieurs classes ?
+
+-> Le cas d’une discrimination à m classes, le neurone de sortie intègre une fonction d’activation softmax à valeurs dans Rm pour avoir le resultat avec la plus grande possibilité.
+
+Q - Quel est le choix par défaut pour les neurones de la couche cachée ?
+
+-> Les neurones de la couche cachée sont munis de la fonction sigmoïde.
+Q - Quel est le paramètre decay de la fonction nnet ?
+
+->  C’est un paramètre qui contribue à limiter le sur-apprentissage
+
+Q - Indiquer une autre façon d'éviter le sur-apprentissage.
+
+-> En utilisant la fonction Dropout.
+Le Dropout est une technique permettant de réduire l’overfitting lors de l’entraînement du modèle.
+Le terme  » Dropout  » fait référence à la suppression de neurones dans les couches d’un modèle de Deep Learning. Le choix des neurones à désactiver est aléatoire
+
+### Cas de la régression
+
+```{r}
+library(MASS)
+library(nnet)
+# apprentissage
+# attention au paramètre linout dans le cas de la régression
+nnet.reg=nnet(O3obs~.,data=datappr,size=5,decay=1,linout=TRUE,maxit=500)
+summary(nnet.reg) 
+```
+
+```{r}
+library(e1071)
+plot(tune.nnet(O3obs~.,data=datappr,size=c(2,3,4),decay=c(1,2,3),maxit=200,linout=TRUE))
+plot(tune.nnet(O3obs~.,data=datappr,size=4:5,decay=1:10))
+```
+```{r}
+nnet.reg=nnet(O3obs~.,data=datappr,size=3,decay=2,linout=TRUE,maxit=200)
+# calcul et graphe des résidus
+fit.nnetr=predict(nnet.reg,data=datappr)
+res.nnetr=fit.nnetr-datappr[,"O3obs"]
+plot.res(fit.nnetr,res.nnetr,titre="")
+```
+
+### Cas de la discrimination
+
+```{r}
+# apprentissage
+nnet.dis=nnet(DepSeuil~.,data=datappq,size=5,decay=0) 
+summary(nnet.reg)
+```
+```{r}
+plot(tune.nnet(DepSeuil~.,data=datappq,size=c(3,4,5),decay=c(0,1,2),maxit=200,linout=FALSE))
+```
+
+```{r}
+nnet.dis=nnet(DepSeuil~.,data=datappq,size=5,decay=1) 
+```
+### Prévisions de l'échantillon test
+
+#### Erreur de régression
+
+```{r}
+# Calcul des prévisions
+pred.nnetr=predict(nnet.reg,newdata=datestr)
+pred.nnetq=predict(nnet.dis,newdata=datestq) 
+# Erreur quadratique moyenne de prévision
+sum((pred.nnetr-datestr[,"O3obs"])^2)/nrow(datestr)
+```
+
+#### Erreur de classification (matrice de confusion)
+
+```{r}
+# Matrice de confusion pour la prévision du dépassement de seuil (régression)
+table(pred.nnetr>150,datestr[,"O3obs"]>150)
+```
+```{r}
+# Même chose pour la discrimination
+table(pred.nnetq>0.5,datestq[,"DepSeuil"])
+```
+#### Courbe ROC
+
+```{r}
+library(ROCR)
+rocnnetr=pred.nnetr/300
+prednnetr=prediction(rocnnetr,datestq$DepSeuil)
+perfnnetr=performance(prednnetr,"tpr","fpr")
+
+rocnnetq=pred.nnetq
+prednnetq=prediction(rocnnetq,datestq$DepSeuil)
+perfnnetq=performance(prednnetq,"tpr","fpr")
+
+# tracer les courbes ROC en les superposant pour mieux comparer
+plot(perflogit,col="blue")           #binomial
+plot(perfnnetr,col="red",lty=2,add=TRUE)  #regression lineare
+plot(perfnnetq,col="darkgreen",add=TRUE)   #Discrimination
+```
+Q - Une méthode semble-t-elle significativement meilleure ?
+
+Les résultats sont presque similaires mais le modèle binomial est le plus correct. 
+
+
+
+
+
+
