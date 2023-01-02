@@ -1,7 +1,7 @@
 # Apprentissage-Automatique
 Fondement de l'Apprentissage Automatique en utilisant le langage R
 
-# Saison 3 [*Apprentissage Automatique / Statistique*](\http://wikistat.fr)
+# [*Apprentissage Automatique / Statistique*](\http://wikistat.fr)
 
 ### [Introduction plus détaillée](http://www.math.univ-toulouse.fr/~besse/Wikistat/pdf/st-m-Intro-ApprentStat.pdf)
 
