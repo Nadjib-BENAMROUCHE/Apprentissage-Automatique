@@ -1,0 +1,103 @@
+---
+title: "TP_Arbre.RMD"
+author: "Nadjib BENAMROUCHE"
+date: "07/11/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+# Pour l’arbre de décision
+library(rpart)
+# Pour la représentation de l’arbre de décision
+library(rpart.plot)
+
+```
+# Partie apprentissage :
+Création des données d'apprentissage :
+
+
+```{r}
+#Creer la base de donneés d'apprentissage
+Meteo <- c('soleil','soleil','soleil','soleil','nuages','nuages','nuages','nuages',
+           'soleil')
+Amis <- c('présents','absents','présents','absents','absents','présents','absents',
+          'présents','absents')
+Vent <- c('faible','fort','fort','faible','faible','fort','fort','faible','faible')
+Jour <- c('week-end','semaine','semaine','semaine','week-end','week-end','semaine',
+          'week-end','week-end')
+Decision <- c('oui','non','non','oui','non','non','non','oui','non')
+data_app <- data.frame(Meteo, Amis, Vent, Jour, Decision)
+glimpse(data_app)
+```
+Construction de l'arbre de décision à partir des données d'apprentissage : 
+
+```{r}
+arbre <- rpart( Decision ~., data = data_app,
+                method = "class",minsplit=2,cp=0)
+arbre
+```
+Représentation de l'arbre de décision non élagué :
+
+```{r}
+rpart.plot(arbre,extra = 1)
+```
+Délégation de l'arbre de décision : 
+
+```{r}
+arbre_elague <- rpart(formula = Decision ~ ., data = data_app, 
+                      minsplit = 2, minbucket=3)
+arbre_elague
+```
+Représentation de l'arbre élagué :
+
+```{r}
+rpart.plot(arbre_elague)
+```
+# Partie test :
+
+Création des données de test 
+```{r}
+Meteo <- c("soleil","nuages","soleil","soleil","nuages")
+Amis <- c("présents","absents","absents","absents","présents")
+Vent <- c("fort","faible","faible","faible","faible")
+Jour <- c("week-end","semaine","week-end","semaine","semaine")
+Decision <- c("non","non","oui","non","oui")
+
+data_test <- data.frame(Meteo,Amis,Vent,Jour,Decision)
+glimpse(data_test)
+
+```
+Prédiction du modèle sur les données de test :
+```{r}
+data_test_predict <- predict(arbre_elague, newdata = data_test,
+                             type = "class")
+data_test_predict
+data_test$Decision
+```
+Matrice de confusion :
+
+```{r}
+mc<-table(data_test$Decision,data_test_predict)
+mc
+
+```
+Calculer l'erreur de classement et le taux de prédiction :
+
+```{r}
+erreur.classement<-1.0-(mc[1,1]+mc[2,2])/sum(mc)
+print( " Erreur = ")
+print(erreur.classement)
+
+prediction=mc[2,2]/sum(mc[2,])
+print (" Taux de prédiction = ")
+print(prediction)
+```
+
+
+
