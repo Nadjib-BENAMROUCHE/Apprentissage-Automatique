@@ -53,7 +53,7 @@ ______________________________________________________
 ## TPs
 ______________________________________________________
 
-TP1 - Statistique descriptive unidimensionnelle (exercice du cours)
+### TP1 - Statistique descriptive unidimensionnelle (exercice du cours)
 Initiation à R (tutoriel: https://github.com/wikistat/Intro-R)
 Programmation R:
 Refaire l’exemple de statistique descriptive unidimensionnelle (slides 18-24)
@@ -66,48 +66,48 @@ Refaire l’exemple de statistique descriptive unidimensionnelle (slides 18-24)
 - La dispersion
 - La variance et l’écart–type
 
-TP2 - Régression linéaire (exercice du cours)
+### TP2 - Régression linéaire (exercice du cours)
 Exercice du cours Régression linéaire (dernier slide)
 
-TP3 - Régression logistique (exercice du cours)
+### TP3 - Régression logistique (exercice du cours)
 Exercice du cours Régression logistique (les 3 derniers slides)
 
-TP4 - Arbre de décision (exercices du TD)
+### TP4 - Arbre de décision (exercices du TD)
 Exercices du TD sur les arbres de décision 
 
-TP5 - Analyse en Composantes Principales
+### TP5 - Analyse en Composantes Principales
 Tutorial : Méthodes des Composantes Principales dans R (Guide Pratique) 
 http://www.sthda.com/french/articles/38-methodes-des-composantes-principales-dans-r-guide-pratique/73-acp-analyse-en-composantes-principales-avec-r-l-essentiel/
 
-TP6 - Réseau de neurones
+### TP6 - Réseau de neurones
 Développement de l’algorithme Perceptron en R
 ______________________________________________________
 ## Projet « Modèle de Prévision du Pic d'Ozone avec R »
 ______________________________________________________
 https://github.com/wikistat/Apprentissage/blob/master/Pic-ozone/Apprent-R-Ozone.ipynb
 
-Partie 1 : Introduction
+### Partie 1 : Introduction
 Introduction 
 Prise en charge des données
 Exploration élémentaire (ACP —> reveoir vos réponses pour cette partie)
 Protocole de comparaison
 
-Partie 2 :    Prévision par modèle gaussien 
+### Partie 2 :    Prévision par modèle gaussien 
 Modèle linéaire
 Modèle quadratique
 Prévision de l'échantillon test
 
-Partie 3 : Prévision par modèle binomial
+### Partie 3 : Prévision par modèle binomial
 Régression logistique sans interaction
 Régression logistique avec interactions
 Prévision de l’échantillon test
 
-Partie 4 : Arbre de décision binaire
+### Partie 4 : Arbre de décision binaire
 Estimation et élagage de l'arbre de régression
 Estimation et élagage d'un arbre de discrimination
 Prévision de l'échantillon test
 
-Partie 5 : Réseau de neurones
+### Partie 5 : Réseau de neurones
 Introduction
 Cas de la régression
 Cas de la discrimination
