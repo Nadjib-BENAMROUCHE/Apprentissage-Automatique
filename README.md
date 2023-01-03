@@ -48,15 +48,67 @@ Pour chaque épisode, **suivre le cours** ou consulter les vignettes et exécute
 - [Imputation de données manquantes](http://wikistat.fr/pdf/st-m-app-idm.pdf)
 - [Apprentissage loyal pour IA éthique](https://github.com/wikistat/Fair-ML-4-Ethical-AI). Suivre le [calepin en R](https://github.com/wikistat/Fair-ML-4-Ethical-AI/blob/master/AdultCensus/AdultCensus-R-biasDetection.ipynb) "bac à sable" d'analyse des données de sondage pour appréhender les questions de biais et discrimination en Apprentisage Automatique: détection et correction.
 - ***NB*** La partie: [Détection de défaillances](http://wikistat.fr/pdf/st-m-app-anomalies.pdf) (*One Class Classification, noveltry detection*) est intégrée à la saison [HDDL](https://github.com/wikistat/High-Dimensional-Deep-Learning).
-## Cas d'usage (sujets d'examen)
-- [`ExemplesJouet`](https://github.com/wikistat/Apprentissage/tree/master/ExemplesJouet) illustratifs sur données simulées:
-	- Discrimination binaire en dimension 2: [`Nuages gaussiens`](https://github.com/wikistat/Apprentissage/tree/master/ExemplesJouet/Apprent-R-Clouds.ipynb) en R ou [`Blobs`](https://github.com/wikistat/Apprentissage/tree/master/ExemplesJouet/Apprent-Python-Blobs.ipynb) de Scikit-learn. Dessiner les frontières des classes selon les méthodes utilisées, rôle du paramètre de compexité;
-	- Régression polynomiale en R, optimisation de la complexité (degré) par *Cp* de Mallows, régularisation *ridge* ou lasso.
-- [`Pic d'ozone`](https://github.com/wikistat/Apprentissage/tree/master/Pic-ozone) Prévision de la concentration (régression) ou de dépassementdu seuil (discrimination binaire) légal d'ozone par la plupart des méthodes d'apprentissage. En R et en Python.
-- [`AdultCensus`](https://github.com/wikistat/Apprentissage/blob/master/Adult-Census/) Données de sondage de 32561 citoyens américains. Prévision de la variable dépassement d'un seuil de revenu à partir de variables socio économiques.
-- [`Diagnostic coronarien`](https://github.com/wikistat/Apprentissage/tree/master/Diag-coro) Prévision du risque de coronopathie (discrimination binaire) par les principales méthodes d'apprentissage en R. Optimisation avec la librairie [`caret`](http://topepo.github.io/caret/index.html), introduction à l'implémentation de [`xgboost`](https://xgboost.readthedocs.io/en/latest/) en R.
-- [`GRC-carte_Visa`](https://github.com/wikistat/Apprentissage/tree/master/GRC-carte_Visa). Exemple de Gestion de la Relation Client (GRC). Prévision du score d'appétance de la carte visa premier; comparaison des méthodes.
-- [`Patrimoine INSEE`](https://github.com/wikistat/Apprentissage/tree/master/Patrim-Insee) La gestion de la relation client appliquée à des données d'enquête INSEE. Recherche d'un score d'appétence pour l'assurance vie.
-- [`Pourriels`](https://github.com/wikistat/Apprentissage/blob/master/Spam/) détection de pourriels dans une base de courriers électroniques.
-- [`NIR`](https://github.com/wikistat/Apprentissage/blob/master/NIR/) Approches utilisées en chimiométrie: modélisation et prévision à partir de mesures spectrométriques dans le proche infra-rouge: taux de sucre dans une pâte à gâteaux et taux de graisse dans des échantillons de viande.
 
+______________________________________________________
+## TPs
+______________________________________________________
+
+TP1 - Statistique descriptive unidimensionnelle (exercice du cours)
+Initiation à R (tutoriel: https://github.com/wikistat/Intro-R)
+Programmation R:
+Refaire l’exemple de statistique descriptive unidimensionnelle (slides 18-24)
+
+- Effectifs, effectifs cumulés, fréquences et fréquences cumulées
+- Représentations graphiques
+- Le diagramme en bâtons + Le diagramme cumulatif
+- La médiane (quantile d’ordre 1/2) et les quartiles (quantile d’ordre1/4, 3/4)
+- La moyenne
+- La dispersion
+- La variance et l’écart–type
+
+TP2 - Régression linéaire (exercice du cours)
+Exercice du cours Régression linéaire (dernier slide)
+
+TP3 - Régression logistique (exercice du cours)
+Exercice du cours Régression logistique (les 3 derniers slides)
+
+TP4 - Arbre de décision (exercices du TD)
+Exercices du TD sur les arbres de décision 
+
+TP5 - Analyse en Composantes Principales
+Tutorial : Méthodes des Composantes Principales dans R (Guide Pratique) 
+http://www.sthda.com/french/articles/38-methodes-des-composantes-principales-dans-r-guide-pratique/73-acp-analyse-en-composantes-principales-avec-r-l-essentiel/
+
+TP6 - Réseau de neurones
+Développement de l’algorithme Perceptron en R
+______________________________________________________
+## Projet « Modèle de Prévision du Pic d'Ozone avec R »
+______________________________________________________
+https://github.com/wikistat/Apprentissage/blob/master/Pic-ozone/Apprent-R-Ozone.ipynb
+
+Partie 1 : Introduction
+Introduction 
+Prise en charge des données
+Exploration élémentaire (ACP —> reveoir vos réponses pour cette partie)
+Protocole de comparaison
+
+Partie 2 :    Prévision par modèle gaussien 
+Modèle linéaire
+Modèle quadratique
+Prévision de l'échantillon test
+
+Partie 3 : Prévision par modèle binomial
+Régression logistique sans interaction
+Régression logistique avec interactions
+Prévision de l’échantillon test
+
+Partie 4 : Arbre de décision binaire
+Estimation et élagage de l'arbre de régression
+Estimation et élagage d'un arbre de discrimination
+Prévision de l'échantillon test
+
+Partie 5 : Réseau de neurones
+Introduction
+Cas de la régression
+Cas de la discrimination
+Prévisions de l'échantillon test
